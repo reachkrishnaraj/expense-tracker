@@ -75,4 +75,47 @@ public interface ExpenseRepository extends JpaRepository<Expense, UUID> {
     int updateManagerIdForSubmittedExpenses(@Param("tenantId") UUID tenantId,
                                            @Param("oldManagerId") UUID oldManagerId,
                                            @Param("newManager") com.expensetracker.model.User newManager);
+
+    // Count and sum grouped by status for a given tenant within a date range
+    @Query("SELECT e.status, COUNT(e), COALESCE(SUM(e.amount), 0) FROM Expense e " +
+           "WHERE e.tenantId = :tenantId AND e.expenseDate BETWEEN :from AND :to " +
+           "GROUP BY e.status")
+    List<Object[]> countAndSumByStatusDateRange(@Param("tenantId") UUID tenantId,
+                                                 @Param("from") LocalDate from,
+                                                 @Param("to") LocalDate to);
+
+    // Sum by category for approved expenses for a specific manager within a date range
+    @Query("SELECT e.category.name, SUM(e.amount), COUNT(e) FROM Expense e " +
+           "WHERE e.tenantId = :tenantId AND e.status = 'APPROVED' " +
+           "AND e.managerId = :managerId " +
+           "AND e.expenseDate BETWEEN :from AND :to GROUP BY e.category.name")
+    List<Object[]> findSpendByCategoryForManager(@Param("tenantId") UUID tenantId,
+                                                  @Param("managerId") UUID managerId,
+                                                  @Param("from") LocalDate from,
+                                                  @Param("to") LocalDate to);
+
+    // Pending approvals queries with optional filters (for approval workflow)
+    @Query("SELECT e FROM Expense e WHERE e.tenantId = :tenantId AND e.status = :status " +
+           "AND (:submitterId IS NULL OR e.submitterId = :submitterId) " +
+           "AND (:categoryId IS NULL OR e.categoryId = :categoryId)")
+    Page<Expense> findPendingForAdmin(@Param("tenantId") UUID tenantId,
+                                      @Param("status") ExpenseStatus status,
+                                      @Param("submitterId") UUID submitterId,
+                                      @Param("categoryId") UUID categoryId,
+                                      Pageable pageable);
+
+    @Query("SELECT e FROM Expense e WHERE e.tenantId = :tenantId AND e.managerId = :managerId " +
+           "AND e.status = :status " +
+           "AND (:submitterId IS NULL OR e.submitterId = :submitterId) " +
+           "AND (:categoryId IS NULL OR e.categoryId = :categoryId)")
+    Page<Expense> findPendingForManager(@Param("tenantId") UUID tenantId,
+                                        @Param("managerId") UUID managerId,
+                                        @Param("status") ExpenseStatus status,
+                                        @Param("submitterId") UUID submitterId,
+                                        @Param("categoryId") UUID categoryId,
+                                        Pageable pageable);
+
+    // Find all expenses for a user with specific statuses
+    List<Expense> findByTenantIdAndSubmitterIdAndStatusIn(UUID tenantId, UUID submitterId,
+                                                          Collection<ExpenseStatus> statuses);
 }
