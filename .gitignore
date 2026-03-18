@@ -53,3 +53,4 @@ logs/
 # Coverage
 coverage/
 *.lcov
+.claude/worktrees/
