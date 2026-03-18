@@ -11,6 +11,7 @@ import com.expensetracker.model.enums.Role;
 import com.expensetracker.repository.OrganizationRepository;
 import com.expensetracker.repository.RefreshTokenRepository;
 import com.expensetracker.repository.UserRepository;
+import com.expensetracker.exception.AccountLockedException;
 import com.expensetracker.security.JwtTokenProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -96,8 +98,8 @@ public class AuthService {
 
         // Check account lockout
         if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now())) {
-            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
-                    "Account is locked. Try again after " + user.getLockedUntil());
+            long retryAfterSeconds = Duration.between(LocalDateTime.now(), user.getLockedUntil()).getSeconds();
+            throw new AccountLockedException(Math.max(retryAfterSeconds, 1));
         }
 
         // Verify password

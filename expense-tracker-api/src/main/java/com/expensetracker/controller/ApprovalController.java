@@ -46,9 +46,10 @@ public class ApprovalController {
         UUID currentUserId = SecurityUtils.getCurrentUserId();
         String role = SecurityUtils.getCurrentRole();
 
+        int effectiveSize = Math.min(Math.max(1, size), 100);
         Page<ExpenseDto> pendingExpenses = approvalService.getPendingApprovals(
                 tenantId, currentUserId, role, submitterId, categoryId,
-                PageRequest.of(page, size));
+                PageRequest.of(page, effectiveSize));
 
         return ResponseEntity.ok(pendingExpenses);
     }

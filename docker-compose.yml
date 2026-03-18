@@ -14,10 +14,42 @@ services:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U expense_user -d expense_tracker"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
       start_period: 10s
 
+  backend:
+    build: ./expense-tracker-api
+    container_name: expense-tracker-api
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/expense_tracker
+      SPRING_DATASOURCE_USERNAME: expense_user
+      SPRING_DATASOURCE_PASSWORD: expense_pass
+      JWT_SECRET: production-secret-key-change-this-in-real-deployment-minimum-32-chars
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/v1/categories 2>/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  frontend:
+    build: ./expense-tracker-ui
+    container_name: expense-tracker-ui
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
+  uploads:

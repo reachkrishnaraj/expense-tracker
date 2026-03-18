@@ -14,6 +14,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -81,6 +82,20 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<ErrorResponse> handleAccountLocked(AccountLockedException ex,
+                                                              HttpServletRequest request) {
+        log.warn("Account locked: {}", ex.getMessage());
+        ErrorResponse response = ErrorResponse.of(
+                ex.getMessage(),
+                "ACCOUNT_LOCKED",
+                request.getRequestURI()
+        );
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Retry-After", String.valueOf(ex.getRetryAfterSeconds()));
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).headers(headers).body(response);
     }
 
     @ExceptionHandler(RateLimitExceededException.class)
@@ -173,6 +188,18 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(response);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatusException(ResponseStatusException ex,
+                                                                        HttpServletRequest request) {
+        log.warn("ResponseStatusException: {} - {}", ex.getStatusCode(), ex.getReason());
+        ErrorResponse response = ErrorResponse.of(
+                ex.getReason() != null ? ex.getReason() : "Error",
+                "ERROR_" + ex.getStatusCode().value(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(ex.getStatusCode()).body(response);
     }
 
     @ExceptionHandler(Exception.class)

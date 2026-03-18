@@ -32,7 +32,7 @@ spring:
 
 app:
   jwt:
-    secret: mySuperSecretKeyForJwtTokenGenerationThatIsAtLeast256BitsLong2024
+    secret: ${JWT_SECRET:default-dev-secret-must-be-at-least-32-characters-long-change-in-production}
     access-token-expiry: 900000
     refresh-token-expiry: 604800000
   uploads:

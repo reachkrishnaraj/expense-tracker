@@ -9,6 +9,7 @@ import com.expensetracker.model.enums.ExpenseStatus;
 import com.expensetracker.repository.ExpenseAuditLogRepository;
 import com.expensetracker.repository.ExpenseRepository;
 import com.expensetracker.repository.UserRepository;
+import com.expensetracker.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +29,8 @@ public class AuditLogService {
     @Transactional
     public ExpenseAuditLog log(UUID expenseId, AuditAction action, UUID performedById,
                                 String comment, ExpenseStatus oldStatus, ExpenseStatus newStatus) {
-        Expense expense = expenseRepository.findById(expenseId)
+        UUID tenantId = SecurityUtils.getCurrentTenantId();
+        Expense expense = expenseRepository.findByIdAndTenantId(expenseId, tenantId)
                 .orElseThrow(() -> new RuntimeException("Expense not found: " + expenseId));
         User performedBy = userRepository.findById(performedById)
                 .orElseThrow(() -> new RuntimeException("User not found: " + performedById));
