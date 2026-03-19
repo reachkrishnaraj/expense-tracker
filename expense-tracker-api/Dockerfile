@@ -29,6 +29,8 @@ RUN chown appuser:appgroup app.jar
 
 USER appuser
 
-EXPOSE 8080
+ENV SPRING_PROFILES_ACTIVE=railway
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+EXPOSE ${PORT:-8080}
+
+CMD ["java", "-jar", "app.jar"]

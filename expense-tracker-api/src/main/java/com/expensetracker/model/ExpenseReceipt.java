@@ -43,7 +43,7 @@ public class ExpenseReceipt {
     @Column(name = "content_type", nullable = false, length = 100)
     private String contentType;
 
-    @Column(name = "file_size", nullable = false)
+    @Column(name = "file_size_bytes", nullable = false)
     private Long fileSizeBytes;
 
     @CreationTimestamp

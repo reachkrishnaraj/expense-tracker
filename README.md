@@ -24,7 +24,7 @@ For detailed architecture documentation, schema design, and trade-off analysis, 
 | Database | PostgreSQL 15, Flyway migrations |
 | Auth | JJWT 0.12, BCrypt |
 | Build | Maven 3.9+ (backend), npm (frontend) |
-| Infrastructure | Docker, Docker Compose |
+| Infrastructure | Docker, Docker Compose, Railway |
 
 ## Quick Start with Docker Compose
 
@@ -36,10 +36,10 @@ docker-compose up --build
 
 Once all services are healthy:
 
-- **Backend API:** http://localhost:8080/api/v1/
+- **Backend API:** http://localhost:8081/api/v1/
 - **Frontend UI:** http://localhost:3000
 
-The database is automatically provisioned with schema migrations on startup.
+The database is automatically provisioned with schema migrations and demo seed data on startup.
 
 ## Manual Development Setup
 
@@ -47,7 +47,7 @@ The database is automatically provisioned with schema migrations on startup.
 
 - Java 17+
 - Node.js 18+
-- PostgreSQL 15
+- PostgreSQL 15 (running on port 5433, or adjust config)
 - Maven 3.8+
 
 ### Database
@@ -63,10 +63,10 @@ psql -U postgres -c "CREATE DATABASE expense_tracker OWNER expense_user;"
 
 ```bash
 cd expense-tracker-api
-mvn spring-boot:run -Dspring-boot.run.profiles=dev
+mvn spring-boot:run
 ```
 
-The backend starts on http://localhost:8080. Flyway migrations run automatically on startup.
+The backend starts on http://localhost:8081. Flyway migrations run automatically on startup.
 
 ### Frontend
 
@@ -76,27 +76,74 @@ npm install
 npm run dev
 ```
 
-The frontend starts on http://localhost:5173 with API requests proxied to `localhost:8080`.
+The frontend starts on http://localhost:5173 with API requests proxied to `localhost:8081`.
 
 ## Demo Credentials
 
-The application is pre-seeded with demo data across two organizations for testing:
+The application is pre-seeded with demo data across two organizations for testing.
+All accounts use the password: **Password1**
 
 ### Acme Corp (primary demo org)
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@acme.com | Password1 |
-| Manager | manager@acme.com | Password1 |
-| Employee | john@acme.com | Password1 |
+| Role | Email | Name |
+|------|-------|------|
+| Admin | admin@acme.com | Alice Admin |
+| Manager | manager@acme.com | Mike Manager |
+| Employee | john@acme.com | John Doe |
+| Employee | jane@acme.com | Jane Smith |
 
 ### Globex Inc (cross-tenant isolation testing)
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@globex.com | Password1 |
+| Role | Email | Name |
+|------|-------|------|
+| Admin | admin@globex.com | Gary Admin |
+| Manager | manager@globex.com | Sarah Manager |
+| Employee | bob@globex.com | Bob Wilson |
 
 Use both organizations to verify that tenant data isolation is enforced correctly.
+
+The Acme Corp organization includes 10 demo expenses in various states (DRAFT, SUBMITTED, APPROVED, REJECTED, CANCELLED) with full audit logs spread across Jan-Mar 2026 for realistic analytics charts.
+
+## Deploy to Railway
+
+### Prerequisites
+
+- A [Railway](https://railway.app) account
+- Code pushed to a GitHub repository
+
+### Steps
+
+1. **Create a new Railway project** and add a **PostgreSQL** plugin. Railway will automatically provision the database and set environment variables.
+
+2. **Add the backend service:**
+   - Click "New Service" > "GitHub Repo" and select your repository
+   - Set the **Root Directory** to `expense-tracker-api`
+   - Add the following environment variables:
+     ```
+     DATABASE_URL=<from Railway PostgreSQL plugin, use JDBC format: jdbc:postgresql://...>
+     DATABASE_USERNAME=<from Railway PostgreSQL plugin>
+     DATABASE_PASSWORD=<from Railway PostgreSQL plugin>
+     JWT_SECRET=<generate a secure random string, at least 32 characters>
+     SPRING_PROFILES_ACTIVE=railway
+     ```
+
+3. **Add the frontend service:**
+   - Click "New Service" > "GitHub Repo" and select your repository
+   - Set the **Root Directory** to `expense-tracker-ui`
+   - Add the following environment variables:
+     ```
+     BACKEND_URL=http://<backend-service-internal-hostname>:8080
+     PORT=80
+     ```
+   - Use the backend service's **internal** Railway hostname for `BACKEND_URL` (found in the backend service's Settings > Networking)
+
+4. **Generate a domain** for the frontend service under Settings > Networking > Public Networking.
+
+5. **Deploy.** Railway will automatically build and deploy both services. The backend runs Flyway migrations on first start to create the schema and seed demo data.
+
+### Environment Variables Reference
+
+See `.env.example` for a complete list of configurable environment variables.
 
 ## API Endpoints
 
@@ -190,11 +237,14 @@ npm run lint
 ```
 Problem_1/
 ├── docker-compose.yml              # Full-stack orchestration
+├── railway.toml                    # Railway monorepo config
+├── .env.example                    # Environment variable reference
 ├── README.md                       # This file
 ├── AI_USAGE.md                     # AI tool usage documentation
 │
 ├── expense-tracker-api/            # Spring Boot backend
 │   ├── Dockerfile                  # Multi-stage build
+│   ├── railway.toml                # Railway backend service config
 │   ├── pom.xml                     # Maven config (Spring Boot 3.3, Java 17)
 │   └── src/
 │       ├── main/
@@ -221,14 +271,17 @@ Problem_1/
 │       │   │   └── service/        # Business logic layer
 │       │   │       └── impl/       # Service implementations
 │       │   └── resources/
-│       │       ├── application.yml         # Default config
-│       │       ├── application-dev.yml     # Dev profile (verbose logging)
-│       │       └── application-docker.yml  # Docker profile (service hostnames)
+│       │       ├── application.yml           # Default config
+│       │       ├── application-dev.yml       # Dev profile (verbose logging)
+│       │       ├── application-docker.yml    # Docker profile (service hostnames)
+│       │       └── application-railway.yml   # Railway production profile
 │       └── test/                   # JUnit 5 + Testcontainers tests
 │
 ├── expense-tracker-ui/             # React frontend
 │   ├── Dockerfile                  # Multi-stage build (Node + Nginx)
-│   ├── nginx.conf                  # Production Nginx config
+│   ├── railway.toml                # Railway frontend service config
+│   ├── nginx.conf                  # Nginx config template (envsubst)
+│   ├── .env.production             # Production env vars for Vite
 │   ├── package.json                # React 18, Vite, Tailwind CSS
 │   ├── vite.config.ts              # Dev server with API proxy
 │   └── src/
@@ -260,5 +313,6 @@ Problem_1/
 | File storage | Local filesystem with API-gated access | Abstracted behind `FileStorageService` for future S3 migration |
 | Rate limiting | Token-bucket per tenant + per-IP for auth | Prevents noisy-neighbor and brute-force attacks |
 | Frontend styling | Tailwind CSS (utility-first) | Full design control; small production bundle; no opinionated component library |
+| Deployment | Railway with Docker | Simple PaaS deployment with separate backend/frontend services and managed PostgreSQL |
 
 For comprehensive design rationale, database schema, security architecture, and trade-off analysis, see [DESIGN.md](../DESIGN.md).

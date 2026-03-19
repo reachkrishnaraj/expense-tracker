@@ -13,6 +13,13 @@ interface CardConfig {
 }
 
 export function SummaryCards({ summary }: SummaryCardsProps) {
+  if (!summary) return null;
+
+  const pending = summary.totalPending ?? summary.pendingCount ?? 0;
+  const approved = summary.totalApprovedAmount ?? summary.approvedAmount ?? 0;
+  const rejected = summary.totalRejected ?? summary.rejectedCount ?? 0;
+  const thisMonth = summary.thisMonthAmount ?? summary.totalApprovedAmount ?? 0;
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -25,7 +32,7 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
   const cards: CardConfig[] = [
     {
       label: 'Pending Approvals',
-      value: summary.pendingCount.toString(),
+      value: pending.toString(),
       color: 'text-blue-600',
       bgColor: 'bg-blue-50 border-blue-200',
       icon: (
@@ -36,7 +43,7 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
     },
     {
       label: 'Total Approved',
-      value: formatCurrency(summary.approvedAmount),
+      value: formatCurrency(approved),
       color: 'text-green-600',
       bgColor: 'bg-green-50 border-green-200',
       icon: (
@@ -47,7 +54,7 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
     },
     {
       label: 'Rejected',
-      value: summary.rejectedCount.toString(),
+      value: rejected.toString(),
       color: 'text-red-600',
       bgColor: 'bg-red-50 border-red-200',
       icon: (
@@ -58,7 +65,7 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
     },
     {
       label: 'This Month',
-      value: formatCurrency(summary.thisMonthAmount),
+      value: formatCurrency(thisMonth),
       color: 'text-purple-600',
       bgColor: 'bg-purple-50 border-purple-200',
       icon: (

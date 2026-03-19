@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: expense_user
       POSTGRES_PASSWORD: expense_pass
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -17,36 +17,33 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 10s
 
   backend:
     build: ./expense-tracker-api
     container_name: expense-tracker-api
     ports:
-      - "8080:8080"
+      - "8081:8081"
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/expense_tracker
-      SPRING_DATASOURCE_USERNAME: expense_user
-      SPRING_DATASOURCE_PASSWORD: expense_pass
-      JWT_SECRET: production-secret-key-change-this-in-real-deployment-minimum-32-chars
+      PORT: 8081
+      DATABASE_URL: jdbc:postgresql://postgres:5432/expense_tracker
+      DATABASE_USERNAME: expense_user
+      DATABASE_PASSWORD: expense_pass
+      JWT_SECRET: local-dev-secret-key-change-in-production-min-32-chars
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - uploads:/app/uploads
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/v1/categories 2>/dev/null || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
 
   frontend:
     build: ./expense-tracker-ui
     container_name: expense-tracker-ui
     ports:
       - "3000:80"
+    environment:
+      BACKEND_URL: http://backend:8081
+      PORT: 80
     depends_on:
       - backend
 

@@ -1,5 +1,5 @@
 spring:
   datasource:
-    url: jdbc:postgresql://postgres:5432/expense_tracker
-    username: expense_user
-    password: expense_pass
+    url: ${DATABASE_URL:jdbc:postgresql://postgres:5432/expense_tracker}
+    username: ${DATABASE_USERNAME:expense_user}
+    password: ${DATABASE_PASSWORD:expense_pass}

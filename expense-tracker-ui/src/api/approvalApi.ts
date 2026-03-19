@@ -18,8 +18,24 @@ export const approvalApi = {
     params?: ApprovalParams
   ): Promise<PaginatedResponse<PendingExpense>> {
     return axiosInstance
-      .get<PaginatedResponse<PendingExpense>>('/expenses/pending', { params })
-      .then((res) => res.data);
+      .get('/approvals/pending', { params })
+      .then((res) => {
+        const data = res.data as any;
+        return {
+          ...data,
+          content: (data.content || []).map((e: any) => ({
+            id: e.id,
+            submitterName: e.submitter?.name || e.submitterName || 'Unknown',
+            submitterEmail: e.submitter?.email || e.submitterEmail || '',
+            date: e.expenseDate || e.date || e.createdAt,
+            category: typeof e.category === 'object' ? e.category?.name : (e.categoryName || e.category || 'N/A'),
+            description: e.notes || e.merchantName || e.description || '',
+            amount: e.amount || 0,
+            currency: e.currency || 'USD',
+            submittedAt: e.updatedAt || e.submittedAt || e.createdAt,
+          })),
+        };
+      });
   },
 
   approveExpense(id: string, comment?: string): Promise<void> {
@@ -36,7 +52,17 @@ export const approvalApi = {
 
   bulkAction(data: BulkApprovalRequest): Promise<BulkApprovalResult> {
     return axiosInstance
-      .post<BulkApprovalResult>('/expenses/bulk-action', data)
-      .then((res) => res.data);
+      .post('/approvals/bulk', data)
+      .then((res) => {
+        const d = res.data as any;
+        // Map backend response (processed/skipped/results) to frontend type (successful/failed)
+        const successful = (d.results || [])
+          .filter((r: any) => r.status === 'SUCCESS')
+          .map((r: any) => r.expenseId);
+        const failed = (d.results || [])
+          .filter((r: any) => r.status !== 'SUCCESS')
+          .map((r: any) => ({ id: r.expenseId, reason: r.reason || 'Unknown' }));
+        return { successful, failed };
+      });
   },
 };

@@ -1,9 +1,15 @@
 export interface AnalyticsSummary {
-  pendingCount: number;
-  approvedAmount: number;
-  rejectedCount: number;
-  thisMonthAmount: number;
+  totalPending: number;
+  totalApproved: number;
+  totalRejected: number;
+  totalSubmitted: number;
+  totalApprovedAmount: number;
   currency: string;
+  // aliases from different response shapes
+  pendingCount?: number;
+  approvedAmount?: number;
+  rejectedCount?: number;
+  thisMonthAmount?: number;
 }
 
 export interface CategorySpend {

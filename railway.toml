@@ -1,0 +1,7 @@
+# This project deploys as two services on Railway:
+# 1. Backend (expense-tracker-api) - Spring Boot
+# 2. Frontend (expense-tracker-ui) - Nginx serving React build
+# Plus a PostgreSQL database plugin
+
+# Note: Each service needs its own railway.toml in its subdirectory,
+# or use Railway's dashboard to configure services from a monorepo.
